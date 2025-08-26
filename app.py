@@ -35,6 +35,8 @@ if "user_answers" not in st.session_state:
     st.session_state.user_answers = {}
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
+if "shuffled_options" not in st.session_state:
+    st.session_state.shuffled_options = {}
 
 st.title("📘 ITPEC FE Evening Exam Practice")
 
@@ -80,6 +82,7 @@ if questions_df is not None:
             )
             st.session_state.exam_started = True
             st.session_state.start_time = time.time()
+            st.session_state.shuffled_options = {}  # reset option orders
             st.rerun()
 
 # ---------------------------
@@ -106,19 +109,22 @@ if st.session_state.exam_started:
         else:
             options = raw_options
 
-        # Shuffle options each time
-        options = random.sample(options, len(options))
+        # Shuffle once and store
+        if row["id"] not in st.session_state.shuffled_options:
+            st.session_state.shuffled_options[row["id"]] = random.sample(options, len(options))
+
+        options = st.session_state.shuffled_options[row["id"]]
 
         prev_answer = st.session_state.user_answers.get(row["id"])
         if prev_answer and prev_answer in options:
             default_index = options.index(prev_answer)
         else:
-            default_index = 0
+            default_index = None  # no default selection
 
         st.session_state.user_answers[row["id"]] = st.radio(
             f"Select answer for {row['id']}",
             options,
-            index=default_index,
+            index=default_index if default_index is not None else 0,
             key=f"q_{row['id']}",
         )
 
@@ -144,3 +150,5 @@ if st.session_state.exam_started:
         st.session_state.exam_questions = []
         st.session_state.user_answers = {}
         st.session_state.start_time = None
+        st.session_state.shuffled_options = {}
+
